@@ -1,16 +1,21 @@
 import { Queue } from 'bullmq';
-import IORedis from 'ioredis';
 
-let connection: IORedis | null = null;
 const queues: Map<string, Queue> = new Map();
 
-function getConnection(): IORedis {
-  if (!connection) {
-    connection = new IORedis(process.env.REDIS_URL ?? 'redis://localhost:6379', {
-      maxRetriesPerRequest: null,
-    });
+function getRedisConnectionOptions() {
+  const url = process.env.REDIS_URL ?? 'redis://localhost:6379';
+  try {
+    const parsed = new URL(url);
+    return {
+      host: parsed.hostname,
+      port: parseInt(parsed.port || '6379', 10),
+      ...(parsed.password ? { password: decodeURIComponent(parsed.password) } : {}),
+      ...(parsed.username && parsed.username !== 'default' ? { username: decodeURIComponent(parsed.username) } : {}),
+      maxRetriesPerRequest: null as null,
+    };
+  } catch {
+    return { host: 'localhost', port: 6379, maxRetriesPerRequest: null as null };
   }
-  return connection;
 }
 
 export function getQueue(name: string): Queue {
@@ -18,7 +23,7 @@ export function getQueue(name: string): Queue {
     queues.set(
       name,
       new Queue(name, {
-        connection: getConnection(),
+        connection: getRedisConnectionOptions(),
         defaultJobOptions: {
           attempts: 3,
           backoff: { type: 'exponential', delay: 1000 },
@@ -35,8 +40,5 @@ export async function closeQueues(): Promise<void> {
   for (const queue of queues.values()) {
     await queue.close();
   }
-  if (connection) {
-    await connection.quit();
-    connection = null;
-  }
+  queues.clear();
 }

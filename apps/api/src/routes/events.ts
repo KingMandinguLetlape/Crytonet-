@@ -22,7 +22,7 @@ const CreateEventSchema = z.object({
   severity: z.enum(['low', 'medium', 'high', 'critical']),
   sourceIp: z.string().ip(),
   userId: z.string().optional(),
-  metadata: z.record(z.unknown()).default({}),
+  metadata: z.record(z.union([z.string(), z.number(), z.boolean(), z.null()])).default({}),
   timestamp: z.string().datetime().optional(),
 });
 
