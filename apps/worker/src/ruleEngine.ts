@@ -1,4 +1,7 @@
-// Re-export rule engine from API for use in worker
-// This avoids duplicating the logic while keeping the worker package self-contained.
-export { evaluateEvent, getAllRules, getRuleById } from '../../api/src/rules/ruleEngine';
-export type { OracodeRuleInstance, RuleContext, EvaluationResult } from '../../api/src/rules/rules';
+// Re-export rule engine from the shared package
+export {
+  evaluateEvent,
+  getAllRules,
+  getRuleById,
+} from '@crytonet/shared';
+export type { OracodeRuleInstance, RuleContext, EvaluationResult } from '@crytonet/shared';

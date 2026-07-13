@@ -128,3 +128,22 @@ export function err(
 ): ApiResponse<never> {
   return { success: false, error: { code, message, details } };
 }
+
+// ─── ORACODE Rule Engine ───────────────────────────────────────────────────
+export type {
+  OracodeRuleInstance,
+  RuleContext,
+  EvaluationResult,
+} from './ruleEngine';
+export {
+  RULE_001,
+  RULE_002,
+  RULE_003,
+  RULE_004,
+  RULE_005,
+  RULE_006,
+  RULE_007,
+  getAllRules,
+  getRuleById,
+  evaluateEvent,
+} from './ruleEngine';

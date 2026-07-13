@@ -1,5 +1,4 @@
 import { Worker, Job, Queue } from 'bullmq';
-import IORedis from 'ioredis';
 import { PrismaClient } from '@prisma/client';
 import { v4 as uuidv4 } from 'uuid';
 import { SecurityEventPayload } from '@crytonet/shared';
@@ -7,10 +6,20 @@ import { evaluateEvent } from './ruleEngine';
 
 const prisma = new PrismaClient();
 
-function getRedis(): IORedis {
-  return new IORedis(process.env.REDIS_URL ?? 'redis://localhost:6379', {
-    maxRetriesPerRequest: null,
-  });
+function getRedisConnectionOptions() {
+  const url = process.env.REDIS_URL ?? 'redis://localhost:6379';
+  try {
+    const parsed = new URL(url);
+    return {
+      host: parsed.hostname,
+      port: parseInt(parsed.port || '6379', 10),
+      ...(parsed.password ? { password: decodeURIComponent(parsed.password) } : {}),
+      ...(parsed.username && parsed.username !== 'default' ? { username: decodeURIComponent(parsed.username) } : {}),
+      maxRetriesPerRequest: null as null,
+    };
+  } catch {
+    return { host: 'localhost', port: 6379, maxRetriesPerRequest: null as null };
+  }
 }
 
 // ─── Job payload ──────────────────────────────────────────────────────────
@@ -80,7 +89,7 @@ async function processEvent(job: Job<EvaluateJobData>): Promise<void> {
             ruleId: d.ruleId,
             action: d.action,
             reason: d.reason,
-            metadata: d.metadata,
+            metadata: d.metadata as Record<string, string | number | boolean | null>,
             timestamp: new Date(d.timestamp),
           },
         }),
@@ -114,22 +123,18 @@ async function processEvent(job: Job<EvaluateJobData>): Promise<void> {
 // ─── Dead letter queue ────────────────────────────────────────────────────
 async function handleFailed(job: Job<EvaluateJobData>, err: Error): Promise<void> {
   console.error(`[worker] Job ${job.id} failed permanently:`, err.message);
-  const dlqRedis = getRedis();
-  const dlq = new Queue('security-events:dlq', { connection: dlqRedis });
+  const dlq = new Queue('security-events:dlq', { connection: getRedisConnectionOptions() });
   await dlq.add('failed', { ...job.data, error: err.message, failedAt: new Date().toISOString() });
   await dlq.close();
-  await dlqRedis.quit();
 }
 
 // ─── Start worker ─────────────────────────────────────────────────────────
 export async function startWorker(): Promise<Worker<EvaluateJobData>> {
-  const connection = getRedis();
-
   const worker = new Worker<EvaluateJobData>(
     'security-events',
     processEvent,
     {
-      connection,
+      connection: getRedisConnectionOptions(),
       concurrency: 10,
       limiter: { max: 500, duration: 1000 },
     },
@@ -155,7 +160,6 @@ export async function startWorker(): Promise<Worker<EvaluateJobData>> {
 
   process.on('SIGTERM', async () => {
     await worker.close();
-    await connection.quit();
     await prisma.$disconnect();
     process.exit(0);
   });

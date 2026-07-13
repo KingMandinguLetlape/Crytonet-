@@ -24,7 +24,7 @@ export async function apiFetch<T>(
     headers,
   });
 
-  const json = await res.json();
+  const json = await res.json() as { success?: boolean; error?: { message?: string }; data?: T };
 
   if (!res.ok || !json.success) {
     throw new Error(json?.error?.message ?? `HTTP ${res.status}`);

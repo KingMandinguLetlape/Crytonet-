@@ -4,7 +4,8 @@ import { hashApiKey, verifyHmacSignature, generateApiKey } from '../auth/crypto'
 describe('hashApiKey', () => {
   it('returns a hex string', () => {
     const hash = hashApiKey('test-key');
-    expect(hash).toMatch(/^[0-9a-f]{64}$/);
+    // scryptSync(key, salt, 64) returns 64 bytes, encoded as 128 hex chars
+    expect(hash).toMatch(/^[0-9a-f]{128}$/);
   });
 
   it('is deterministic', () => {
