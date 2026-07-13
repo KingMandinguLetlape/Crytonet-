@@ -23,6 +23,27 @@ function getRedisConnectionOptions() {
 }
 
 // ─── Job payload ──────────────────────────────────────────────────────────
+type PrismaJsonValue = string | number | boolean | null;
+
+function sanitizeMetadata(
+  raw: Record<string, unknown>,
+): Record<string, PrismaJsonValue> {
+  const result: Record<string, PrismaJsonValue> = {};
+  for (const [k, v] of Object.entries(raw)) {
+    if (
+      typeof v === 'string' ||
+      typeof v === 'number' ||
+      typeof v === 'boolean' ||
+      v === null
+    ) {
+      result[k] = v;
+    } else {
+      result[k] = String(v);
+    }
+  }
+  return result;
+}
+
 interface EvaluateJobData {
   eventId: string;
   tenantId: string;
@@ -89,7 +110,7 @@ async function processEvent(job: Job<EvaluateJobData>): Promise<void> {
             ruleId: d.ruleId,
             action: d.action,
             reason: d.reason,
-            metadata: d.metadata as Record<string, string | number | boolean | null>,
+            metadata: sanitizeMetadata(d.metadata as Record<string, unknown>),
             timestamp: new Date(d.timestamp),
           },
         }),

@@ -228,8 +228,8 @@ export const RULE_006: OracodeRuleInstance = {
         new Date(e.timestamp) >= cutoff,
     );
     const uniqueUsers = new Set([
-      ...recentAttempts.map((e) => e.userId ?? e.metadata?.['username'] as string),
-      event.userId ?? (event.metadata as Record<string, unknown>)['username'] as string,
+      ...recentAttempts.map((e) => e.userId ?? (e.metadata?.['username'] as string | undefined)),
+      event.userId ?? (event.metadata as Record<string, unknown>)['username'] as string | undefined,
     ].filter(Boolean));
     if (uniqueUsers.size > 20) {
       return {
