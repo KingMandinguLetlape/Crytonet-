@@ -14,7 +14,11 @@ const app = express();
 // ─── Global middleware ─────────────────────────────────────────────────────
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN ?? '*',
+    origin: process.env.CORS_ORIGIN
+      ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
+      : process.env.NODE_ENV === 'production'
+      ? false
+      : 'http://localhost:3000',
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Api-Key', 'X-Signature'],
   }),

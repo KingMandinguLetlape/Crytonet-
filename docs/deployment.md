@@ -27,7 +27,7 @@ cp .env.example .env
 Edit `.env` with production-grade secrets:
 
 ```dotenv
-DATABASE_URL=******postgres:5432/crytonet
+DATABASE_URL=postgresql://<user>:<password>@postgres:5432/crytonet
 REDIS_URL=redis://redis:6379
 JWT_SECRET=<generate with: openssl rand -hex 32>
 API_KEY_SALT=<generate with: openssl rand -hex 32>
@@ -70,7 +70,7 @@ curl http://localhost:3002/health
 
 | Variable | Required | Example |
 |----------|----------|---------|
-| `DATABASE_URL` | ✅ | `******host:5432/db` |
+| `DATABASE_URL` | ✅ | `postgresql://<user>:<password>@host:5432/db` |
 | `REDIS_URL` | ✅ | `redis://localhost:6379` |
 | `JWT_SECRET` | ✅ | 32+ random hex chars |
 | `API_KEY_SALT` | ✅ | 32+ random hex chars |

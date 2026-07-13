@@ -2,8 +2,12 @@ import crypto from 'crypto';
 
 const SALT = process.env.API_KEY_SALT ?? 'default-salt';
 
+/**
+ * Hash an API key using scrypt (a memory-hard KDF), making brute-force attacks
+ * computationally expensive even if the key database is compromised.
+ */
 export function hashApiKey(rawKey: string): string {
-  return crypto.createHmac('sha256', SALT).update(rawKey).digest('hex');
+  return crypto.scryptSync(rawKey, SALT, 64).toString('hex');
 }
 
 export function generateApiKey(): string {
