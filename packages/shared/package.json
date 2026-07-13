@@ -1,0 +1,15 @@
+{
+  "name": "@crytonet/shared",
+  "version": "1.0.0",
+  "description": "Shared types, constants, and utilities for CRYTONET",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "lint": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}
