@@ -1,0 +1,138 @@
+// This is your Prisma schema file.
+// Learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Tenant ───────────────────────────────────────────────────────────────
+model Tenant {
+  id         String   @id @default(uuid())
+  name       String
+  slug       String   @unique
+  plan       String   @default("free") // free | starter | pro | enterprise
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  users          User[]
+  apiKeys        ApiKey[]
+  securityEvents SecurityEvent[]
+  decisions      Decision[]
+  auditLogs      AuditLog[]
+  incidents      Incident[]
+}
+
+// ─── User ─────────────────────────────────────────────────────────────────
+model User {
+  id           String   @id @default(uuid())
+  tenantId     String
+  email        String
+  passwordHash String
+  role         String   @default("viewer") // super_admin | admin | analyst | viewer
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  incidents Incident[] @relation("IncidentAssignee")
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+}
+
+// ─── ApiKey ───────────────────────────────────────────────────────────────
+model ApiKey {
+  id         String    @id @default(uuid())
+  tenantId   String
+  name       String
+  keyHash    String    @unique
+  lastUsedAt DateTime?
+  expiresAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([keyHash])
+}
+
+// ─── SecurityEvent ────────────────────────────────────────────────────────
+model SecurityEvent {
+  id        String   @id @default(uuid())
+  tenantId  String
+  type      String   // login_failed | login_success | api_request | data_download | ...
+  severity  String   // low | medium | high | critical
+  sourceIp  String
+  userId    String?
+  metadata  Json     @default("{}")
+  timestamp DateTime @default(now())
+  processed Boolean  @default(false)
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  decisions Decision[]
+
+  @@index([tenantId])
+  @@index([tenantId, timestamp])
+  @@index([tenantId, type])
+}
+
+// ─── Decision ─────────────────────────────────────────────────────────────
+model Decision {
+  id        String   @id @default(uuid())
+  tenantId  String
+  eventId   String
+  ruleId    String
+  action    String   // allow | alert | block | throttle | terminate
+  reason    String
+  metadata  Json     @default("{}")
+  timestamp DateTime @default(now())
+
+  tenant Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  event  SecurityEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, ruleId])
+  @@index([eventId])
+}
+
+// ─── AuditLog ─────────────────────────────────────────────────────────────
+model AuditLog {
+  id           String   @id @default(uuid())
+  tenantId     String
+  actorId      String
+  actorType    String   // user | system | api_key
+  action       String
+  resourceType String
+  resourceId   String
+  metadata     Json     @default("{}")
+  timestamp    DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, timestamp])
+  @@index([actorId])
+}
+
+// ─── Incident ─────────────────────────────────────────────────────────────
+model Incident {
+  id         String    @id @default(uuid())
+  tenantId   String
+  title      String
+  severity   String    // low | medium | high | critical
+  status     String    @default("open") // open | investigating | resolved | closed
+  assigneeId String?
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+
+  tenant   Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  assignee User?   @relation("IncidentAssignee", fields: [assigneeId], references: [id])
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+}
